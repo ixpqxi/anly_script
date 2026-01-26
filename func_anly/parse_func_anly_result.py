@@ -3,7 +3,10 @@ import json
 import os
 from typing import Dict, List, Set
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field, computed_field
+
+load_dotenv()
 
 
 class Operation(BaseModel):

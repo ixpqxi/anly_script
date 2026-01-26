@@ -1,6 +1,10 @@
 import json
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def read_file(file_path):
   """Reads the content of a file and returns it as a string."""
@@ -48,7 +52,7 @@ def gen_batch_inputs():
       "OUTPUT_INDEX_TABLE_FILE", "result/index_table.json")
   project_files = os.listdir(func_data_dir)
 
-  prompt = read_file("test/prompt.txt")
+  prompt = read_file(os.getenv("PROMPT_FILE"))
   code_snippets_hashes = set()
 
   batch_size = 45000
@@ -100,5 +104,7 @@ def gen_batch_inputs():
       batch_f.close()
 
 
+if __name__ == "__main__":
+  gen_batch_inputs()
 if __name__ == "__main__":
   gen_batch_inputs()
