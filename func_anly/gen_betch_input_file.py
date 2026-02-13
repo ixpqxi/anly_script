@@ -57,7 +57,7 @@ def gen_batch_inputs():
 
   batch_size = 45000
   i = 0
-  batch_num = 3
+  batch_num = 1
   batch_f = None  # 用于持有当前批处理文件的句柄
 
   j = 0
@@ -104,7 +104,5 @@ def gen_batch_inputs():
       batch_f.close()
 
 
-if __name__ == "__main__":
-  gen_batch_inputs()
 if __name__ == "__main__":
   gen_batch_inputs()

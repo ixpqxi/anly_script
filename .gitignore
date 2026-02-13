@@ -8,3 +8,14 @@ wheels/
 
 # Virtual environments
 .venv
+
+optype*/
+resource_name*/
+resource_anly*/
+index_table*/
+*.jsonl
+*.json
+.env
+*.csv
+*.txt
+result/
