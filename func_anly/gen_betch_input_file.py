@@ -47,7 +47,7 @@ def single_input(
 
 def gen_batch_inputs():
   func_data_dir = os.getenv(
-      "FUNC_DATA_DIR", "/mnt/d/vulnerability_discovery/论文撰写/yuj/dataset/func_metadata")
+      "FUNC_DATA_DIR", "")
   output_index_table_file = os.getenv(
       "OUTPUT_INDEX_TABLE_FILE", "result/index_table.json")
   project_files = os.listdir(func_data_dir)
