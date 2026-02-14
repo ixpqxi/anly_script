@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 
 from json_repair import repair_json
 from pydantic import BaseModel, Field, computed_field
@@ -43,6 +43,11 @@ class VulnerabilityReport(BaseModel):
   # report_path: str
 
 
+class VulnTypeInfo(BaseModel):
+  stateful_count: int = 0
+  unstateful_count: int = 0
+
+
 class StatisticsResult(BaseModel):
   count: int = 0
   is_web_count: int = 0
@@ -62,41 +67,100 @@ class StatisticsResult(BaseModel):
   req_control_folw_vulns: List[VulnerabilityReport] = Field(
       default_factory=list)
   req_data_flow_vulns: List[VulnerabilityReport] = Field(default_factory=list)
+  vuln_type_statistics: Dict[str, VulnTypeInfo] = Field(default_factory=dict)
 
 
-statistics_result = StatisticsResult()
-error_count = 0
+def statistics_result():
+  statistics_result = StatisticsResult()
+  error_count = 0
 
-with open("./result/state_dep_vuln/judgment_result.jsonl", "r", encoding="utf-8") as f:
-  for line in f:
-    line = line.strip()
-    line = repair_json(line)
+  with open("./result/state_dep_vuln/judgment_result.jsonl", "r", encoding="utf-8") as f:
+    for line in f:
+      line = line.strip()
+      line = repair_json(line)
 
-    # result = json.loads(line)
-    try:
-      report: VulnerabilityReport = VulnerabilityReport.model_validate_json(
-          line)
-    except Exception as e:
-      error_count += 1
-      print("Error!", e)
-      continue
+      # result = json.loads(line)
+      try:
+        report: VulnerabilityReport = VulnerabilityReport.model_validate_json(
+            line)
+      except Exception as e:
+        error_count += 1
+        print("Error!", e)
+        continue
 
-    statistics_result.count += 1
-    if report.is_web:
-      statistics_result.is_web_count += 1
-    if report.is_stateful:
-      statistics_result.is_stateful_count += 1
+      statistics_result.count += 1
+      if report.is_web:
+        statistics_result.is_web_count += 1
+      else:
+        continue
 
-    is_control_flow = report.dependency_analysis.requires_control_flow
-    is_data_flow = report.dependency_analysis.requires_data_flow
+      # 漏洞类型统计
+      if report.vulnerability_type not in statistics_result.vuln_type_statistics:
+        statistics_result.vuln_type_statistics[report.vulnerability_type] = VulnTypeInfo(
+        )
 
-    if is_control_flow and is_data_flow:
-      statistics_result.req_control_and_data_flow_count += 1
-    if is_control_flow:
-      statistics_result.req_control_folw_vulns.append(report)
-    if is_data_flow:
-      statistics_result.req_data_flow_vulns.append(report)
+      if report.is_stateful:
+        statistics_result.is_stateful_count += 1
+        statistics_result.vuln_type_statistics[report.vulnerability_type].stateful_count += 1
+      else:
+        statistics_result.vuln_type_statistics[report.vulnerability_type].unstateful_count += 1
 
-with open("./result/state_dep_vuln/statistics_result.json", "w", encoding="utf-8") as f:
-  f.write(statistics_result.model_dump_json(indent=2))
-print("error count:", error_count)
+      is_control_flow = report.dependency_analysis.requires_control_flow
+      is_data_flow = report.dependency_analysis.requires_data_flow
+
+      if is_control_flow and is_data_flow:
+        statistics_result.req_control_and_data_flow_count += 1
+      if is_control_flow:
+        statistics_result.req_control_folw_vulns.append(report)
+      if is_data_flow:
+        statistics_result.req_data_flow_vulns.append(report)
+
+  with open("./result/state_dep_vuln/statistics_result_new_c.json", "w", encoding="utf-8") as f:
+    f.write(statistics_result.model_dump_json(indent=2))
+  print("error count:", error_count)
+
+
+def anly_control_and_data_flow():
+  with open("./result/state_dep_vuln/statistics_result.json", "r", encoding="utf-8") as f:
+    statistics_result = StatisticsResult.model_validate_json(f.read())
+
+  vuln_types = {}
+
+  for report in statistics_result.req_control_folw_vulns:
+    if report.dependency_analysis.requires_control_flow and report.dependency_analysis.requires_data_flow:
+      vuln_types[report.vulnerability_type] = vuln_types.get(
+          report.vulnerability_type, 0) + 1
+
+  for report in statistics_result.req_data_flow_vulns:
+    if report.dependency_analysis.requires_control_flow and report.dependency_analysis.requires_data_flow:
+      vuln_types[report.vulnerability_type] = vuln_types.get(
+          report.vulnerability_type, 0) + 1
+
+  print(vuln_types)
+
+
+# def statstics_result():
+
+
+def anly_statistics_result():
+  with open("./result/state_dep_vuln/statistics_result_new.json", "r", encoding="utf-8") as f:
+    statistics_result = StatisticsResult.model_validate_json(f.read())
+
+  is_web_count = statistics_result.is_web_count
+  is_stateful_count = statistics_result.is_stateful_count
+  req_control_and_data_flow_count = statistics_result.req_control_and_data_flow_count
+  req_control_count = statistics_result.req_control_count
+  req_data_count = statistics_result.req_data_count
+
+  print("stateful:", is_stateful_count / is_web_count)
+  print("unstateful:", (is_web_count - is_stateful_count) / is_web_count)
+  print("req_control_and_data_flow:",
+        req_control_and_data_flow_count / is_web_count)
+  print("req_control:", req_control_count / is_web_count)
+  print("req_data:", req_data_count / is_web_count)
+
+
+if __name__ == "__main__":
+  statistics_result()
+  # anly_statistics_result()
+  # anly_control_and_data_flow()
